@@ -1,0 +1,761 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<SQLiteSystemConfiguration>
+  <SQLiteDataBasePath>DataBase</SQLiteDataBasePath>
+  <SQLiteDataBaseFileName>LabelManagement.DB</SQLiteDataBaseFileName>
+  <SQLiteAttachDataBaseFileName></SQLiteAttachDataBaseFileName>
+  <StorageProcedureList>
+    <!--Category-->
+    <StorageProcedure>
+      <Name>rCategory</Name>
+      <AttachDataBaseName></AttachDataBaseName>
+      <CommandText>
+        SELECT
+        *
+        FROM
+        CategoryMTR AS c
+        ORDER BY
+        c.Name
+      </CommandText>
+    </StorageProcedure>
+    <StorageProcedure>
+      <Name>cCategory</Name>
+      <AttachDataBaseName></AttachDataBaseName>
+      <CommandText>
+        INSERT INTO CategoryMTR (Name)
+        VALUES
+        ('{0}')
+      </CommandText>
+    </StorageProcedure>
+    <StorageProcedure>
+      <Name>uCategory</Name>
+      <AttachDataBaseName></AttachDataBaseName>
+      <CommandText>
+        UPDATE CategoryMTR
+        SET Name = '{1}'
+        WHERE
+        [Id]='{0}'
+      </CommandText>
+    </StorageProcedure>
+    <StorageProcedure>
+      <Name>dCategory</Name>
+      <AttachDataBaseName></AttachDataBaseName>
+      <CommandText>
+        DELETE
+        FROM
+        CategoryMTR
+        WHERE
+        Id ='{0}'
+        AND NOT EXISTS (
+        SELECT
+        *
+        FROM
+        Label AS l
+        WHERE
+        l.CategoryID = ID
+        )
+      </CommandText>
+    </StorageProcedure>
+    <StorageProcedure>
+      <Name>rCategoryByID</Name>
+      <AttachDataBaseName></AttachDataBaseName>
+      <CommandText>
+        SELECT
+        *
+        FROM
+        CategoryMTR AS a
+        WHERE
+        a.ID ='{0}'
+      </CommandText>
+    </StorageProcedure>
+    <StorageProcedure>
+      <Name>rCategoryByName</Name>
+      <AttachDataBaseName></AttachDataBaseName>
+      <CommandText>
+        SELECT
+        *
+        FROM
+        CategoryMTR AS a
+        WHERE
+        a.Name ='{0}'
+      </CommandText>
+    </StorageProcedure>
+    
+    <!--Label-->
+    <StorageProcedure>
+      <Name>cLabel</Name>
+      <AttachDataBaseName></AttachDataBaseName>
+      <CommandText>
+        INSERT INTO Label (
+        CategoryID,
+        Code,
+        Name,
+        LabelTypeID,
+        EntryAccount,
+        EntryTime,
+        DefaultPrinter,
+        DepartmentID,
+        Effectiveness
+        )
+        VALUES
+        (
+        '{0}' ,'{1}' ,'{2}' ,'{3}' ,'{4}',
+        datetime('now','localtime') ,'{5}' ,'{6}' ,'{7}'
+        );
+
+        INSERT INTO LabelTemplet (LabelCode, FileName)
+        VALUES
+        ('{1}', '{8}');
+      </CommandText>
+    </StorageProcedure>
+    <StorageProcedure>
+      <Name>uLabelByLabelCode</Name>
+      <AttachDataBaseName></AttachDataBaseName>
+      <CommandText>
+        update Label set CategoryID='{0}',
+        Name='{2}',
+        LabelTypeID='{3}',
+        EntryAccount='{4}',
+        EntryTime=datetime('now','localtime'),
+        DefaultPrinter='{5}',
+        DepartmentID = '{6}',
+        Effectiveness = '{7}'
+        where Label.Code='{1}';
+
+
+        update LabelTemplet set FileName='{8}'
+        where LabelTemplet.LabelCode='{1}';
+      </CommandText>
+    </StorageProcedure>
+    <StorageProcedure>
+      <Name>rGeneralLabelByCondition</Name>
+      <AttachDataBaseName></AttachDataBaseName>
+      <CommandText>
+        SELECT DISTINCT
+        l.Code,
+        c.ID AS CategoryID,
+        c.Name AS CategoryName,
+        l.Name,
+        l.LabelTypeID,
+        ltemplet.FileName,
+        l.EntryAccount,
+        l.EntryTime,
+        u.UserName AS UserName,
+        l.DefaultPrinter,
+        l.Effectiveness,
+        l.DepartmentID,
+        d.Code AS DepartmentCode,
+        d.Name AS DepartmentName,
+        la.LabelWidth,
+        la.LabelHeight,
+        la.Material,
+        la.Color,
+        la.CustomerNo,
+        la.CustomerType,
+        la.CustomerRemark
+        FROM
+        Label AS l
+        INNER JOIN LabelTemplet AS ltemplet ON ltemplet.LabelCode = l.Code
+        INNER JOIN CategoryMTR AS c ON c.ID = l.CategoryID
+        LEFT JOIN UserMTR AS u ON u.LoginAccount = l.EntryAccount
+        INNER JOIN Department AS d ON d.ID = l.DepartmentID
+        INNER JOIN UserMTR AS ulogin ON ('{1}' is null or '{1}'='' or ulogin.LoginAccount = '{1}')
+        INNER JOIN UserDepartment AS ud ON ud.UserID = ulogin.ID
+        AND ud.DepartmentCode = d.Code
+        LEFT JOIN LabelAccessory as la
+        on la.LabelCode=l.Code
+        WHERE
+        {0}
+        AND l.LabelTypeID = 1;
+      </CommandText>
+    </StorageProcedure>
+    <StorageProcedure>
+      <Name>rSequenceLabelByCondition</Name>
+      <AttachDataBaseName></AttachDataBaseName>
+      <CommandText>
+        SELECT DISTINCT
+        l.Code,
+        l.CategoryID,
+        c.Name AS CategoryName,
+        s.TimeType,
+        l.Name,
+        l.LabelTypeID,
+        s.OriginSequenceNo,
+        s.StartIndex,
+        s.EndIndex,
+        sno.NextNo,
+        ltemplet.FileName,
+        s.UseSysSequenceNo,
+        l.EntryAccount,
+        l.EntryTime,
+        u.UserName AS UserName,
+        l.DefaultPrinter,
+        l.Effectiveness,
+        l.DepartmentID,
+        d.Code AS DepartmentCode,
+        d.Name AS DepartmentName,
+        la.LabelWidth,
+        la.LabelHeight,
+        la.Material,
+        la.Color,
+        la.CustomerNo,
+        la.CustomerType,
+        la.CustomerRemark
+        FROM
+        Label AS l
+        INNER JOIN SequenceSpec AS s ON l.Code = s.LabelCode
+        LEFT JOIN LabelSequenceNo AS sno ON s.LabelCode = sno.LabelCode
+        AND sno.Date = CASE s.TimeType
+        WHEN 'yyyy' THEN
+        substr(strftime('%Y%m%d%H%M%S', datetime('now','localtime')),1,4)
+        WHEN 'yyyymm' THEN
+        substr(strftime('%Y%m%d%H%M%S', datetime('now','localtime')),1,6)
+        WHEN 'yyyymmdd' THEN
+        substr(strftime('%Y%m%d%H%M%S', datetime('now','localtime')),1,8)
+        ELSE
+        ''
+        END
+        INNER JOIN LabelTemplet AS ltemplet ON ltemplet.LabelCode = l.Code
+        INNER JOIN CategoryMTR AS c ON c.ID = l.CategoryID
+        LEFT JOIN UserMTR AS u ON u.LoginAccount = l.EntryAccount
+        AND ('{1}' is null or '{1}'='' or u.LoginAccount = '{1}')
+        INNER JOIN Department AS d ON d.ID = l.DepartmentID
+        LEFT JOIN LabelAccessory as la
+        on la.LabelCode=l.Code
+        WHERE {0}
+      </CommandText>
+    </StorageProcedure>
+    <StorageProcedure>
+      <Name>dLabelByLabelCode</Name>
+      <AttachDataBaseName></AttachDataBaseName>
+      <CommandText>
+        DELETE
+        FROM
+        Label
+        WHERE
+        [Label].Code='{0}';
+
+        DELETE
+        FROM
+        GeneralSpec
+        WHERE
+        [GeneralSpec].LabelCode ='{0}';
+
+        DELETE
+        FROM
+        SequenceSpec
+        WHERE
+        [SequenceSpec].LabelCode ='{0}';
+
+        DELETE FROM
+        LabelTemplet
+        WHERE
+        [LabelTemplet].LabelCode ='{0}';
+
+        DELETE
+        FROM
+        LabelSequenceNo
+        WHERE
+        [LabelSequenceNo].LabelCode ='{0}'
+      </CommandText>
+    </StorageProcedure>
+    <StorageProcedure>
+      <Name>rLabelTempletByLabelCode</Name>
+      <AttachDataBaseName></AttachDataBaseName>
+      <CommandText>
+        SELECT
+        *
+        FROM
+        LabelTemplet AS g
+        WHERE
+        g.LabelCode ='{0}'
+      </CommandText>
+    </StorageProcedure>
+    
+    <!--GeneralSpec-->
+    <StorageProcedure>
+      <Name>cGeneralSpec</Name>
+      <AttachDataBaseName></AttachDataBaseName>
+      <CommandText>
+        CREATE TEMP TABLE Label_Table (
+        Code TEXT,
+        Name TEXT,
+        DefaultValue TEXT
+        );
+
+        --插入临时表内容，不用加''
+        {1}
+
+        INSERT INTO GeneralSpec (
+        LabelCode,
+        Code,
+        Name,
+        DefaultValue,
+        EntryAccount,
+        EntryTime
+        )
+        SELECT
+        '{0}',--LabelCode
+        Code,
+        Name,
+        DefaultValue,
+        '{2}',--EntryAccount
+        datetime('now','localtime')
+        FROM
+        Label_Table;
+        drop table Label_Table
+      </CommandText>
+    </StorageProcedure>
+    <StorageProcedure>
+      <Name>dAllGeneralSpec</Name>
+      <AttachDataBaseName></AttachDataBaseName>
+      <CommandText>
+        DELETE FROM GeneralSpec
+        WHERE
+        LabelCode='{0}'--LabelCode
+      </CommandText>
+    </StorageProcedure>
+    <StorageProcedure>
+      <Name>dGeneralSpec</Name>
+      <AttachDataBaseName></AttachDataBaseName>
+      <CommandText>
+        DELETE GeneralSpec
+        WHERE
+        GeneralSpec.Code ='{0}'--Code
+        AND GeneralSpec.LabelCode ='{1}'--LabelCode
+      </CommandText>
+    </StorageProcedure>
+    <StorageProcedure>
+      <Name>rGeneralSpecByLabelCode</Name>
+      <AttachDataBaseName></AttachDataBaseName>
+      <CommandText>
+        SELECT
+        *
+        FROM
+        GeneralSpec AS g
+        WHERE
+        g.LabelCode ='{0}'
+        ORDER BY
+        g.Code
+      </CommandText>
+    </StorageProcedure>
+    
+    <!--SequenceSpec-->
+    <StorageProcedure>
+      <Name>cSequenceSpec</Name>
+      <AttachDataBaseName></AttachDataBaseName>
+      <CommandText>
+        INSERT INTO SequenceSpec (
+        LabelCode,
+        OriginSequenceNo,
+        StartIndex,
+        EndIndex,
+        TimeType,
+        EntryAccount,
+        EntryTime,
+        UseSysSequenceNo
+        )
+        VALUES
+        (
+        '{0}' ,--LabelCode
+        '{1}' ,--OriginSequenceNo
+        '{2}' ,--StartIndex
+        '{3}' ,--EndIndex
+        '{4}' ,--TimeType
+        '{5}',--EntryAccount
+        datetime('now','localtime') ,
+        '{6}'--UseSysSequenceNo
+        )
+      </CommandText>
+    </StorageProcedure>
+    <StorageProcedure>
+      <Name>uSequenceSpec</Name>
+      <AttachDataBaseName></AttachDataBaseName>
+      <CommandText>
+        UPDATE SequenceSpec
+        SET OriginSequenceNo ='{1}',
+        StartIndex ='{2}',
+        EndIndex ='{3}',
+        TimeType ='{4}',
+        EntryAccount ='{5}',
+        EntryTime = datetime('now','localtime'),
+        UseSysSequenceNo='{6}'
+        WHERE
+        SequenceSpec.LabelCode ='{0}'
+      </CommandText>
+    </StorageProcedure>
+    
+    <!--LabelNextNo-->
+    <StorageProcedure>
+      <Name>rLabelNextNo</Name>
+      <AttachDataBaseName></AttachDataBaseName>
+      <CommandText>
+        SELECT
+        *
+        FROM
+        LabelSequenceNo
+        WHERE
+        LabelCode='{0}'
+        AND [Date]='{1}'
+        ORDER BY
+        EntryTime DESC
+        LIMIT 1
+      </CommandText>
+    </StorageProcedure>
+    <StorageProcedure>
+      <Name>cLabelNextNo</Name>
+      <AttachDataBaseName></AttachDataBaseName>
+      <CommandText>
+        INSERT INTO LabelSequenceNo (
+        LabelCode,
+        Date,
+        NextNo,
+        EntryTime
+        ) SELECT
+        '{0}' ,'{1}',
+        '{2}',
+        datetime('now','localtime')
+      </CommandText>
+    </StorageProcedure>
+    <StorageProcedure>
+      <Name>uLabelNextNo</Name>
+      <AttachDataBaseName></AttachDataBaseName>
+      <CommandText>
+        UPDATE LabelSequenceNo
+        SET NextNo='{2}',
+        EntryTime = datetime('now','localtime')
+        WHERE
+        LabelCode ='{0}' and [Date]='{1}'
+      </CommandText>
+    </StorageProcedure>
+    
+    <!--LabelState-->
+    <StorageProcedure>
+      <Name>uLabelState</Name>
+      <AttachDataBaseName></AttachDataBaseName>
+      <CommandText>
+        UPDATE Label
+        SET Effectiveness='{1}'
+        WHERE
+        Code='{0}'
+      </CommandText>
+    </StorageProcedure>
+    
+    <!--SysLabelTypeMtr-->
+    <StorageProcedure>
+      <Name>rSysLabelTypeMtr</Name>
+      <AttachDataBaseName></AttachDataBaseName>
+      <CommandText>
+        SELECT
+        *
+        FROM
+        SysLabelTypeMtr AS c
+        WHERE
+        c.ID != 2
+        AND c.ID != 4
+        ORDER BY
+        c.Id
+      </CommandText>
+    </StorageProcedure>
+    
+    <!--LabelLog-->
+    <StorageProcedure>
+      <Name>rLabelLogByLabelCode</Name>
+      <AttachDataBaseName></AttachDataBaseName>
+      <CommandText>
+        SELECT
+        a.LabelCode,
+        b.Name AS LabelName,
+        a.Remark,
+        a.EntryAccount,
+        a.EntryTime,
+        a.[Status],
+        u.UserName
+        FROM
+        LabelLog AS a
+        INNER JOIN Label AS b ON a.LabelCode=b.Code
+        LEFT JOIN UserMTR AS u ON u.LoginAccount=a.EntryAccount
+        WHERE
+        a.LabelCode ='{0}'
+        ORDER BY
+        a.EntryTime DESC
+      </CommandText>
+    </StorageProcedure>
+    <StorageProcedure>
+      <Name>cLabelLog</Name>
+      <AttachDataBaseName></AttachDataBaseName>
+      <CommandText>
+        INSERT INTO [LabelLog] (
+        [LabelCode] ,[Remark] ,[EntryAccount] ,[EntryTime] ,[Status]
+        )
+        VALUES
+        (
+        '{0}' ,'{1}' ,'{2}',
+        datetime('now','localtime'),'{3}'
+        )
+      </CommandText>
+    </StorageProcedure>
+    <StorageProcedure>
+      <Name>dLabelLog</Name>
+      <AttachDataBaseName></AttachDataBaseName>
+      <CommandText>
+        DELETE
+        FROM
+        LabelLog
+        WHERE
+        LabelCode ='{0}'
+      </CommandText>
+    </StorageProcedure>
+    
+    <!--PrintLog-->
+    <StorageProcedure>
+      <Name>rPrintLogByConditions</Name>
+      <AttachDataBaseName></AttachDataBaseName>
+      <CommandText>
+        SELECT
+        p.LabelCode,
+        c.Name AS Category,
+        l.Name,
+        p.Remark,
+        p.EntryAccount,
+        p.EntryTime,
+        l.LabelTypeID,
+        ltype.Name AS LabelTypeName,
+        la.LabelWidth,
+        la.LabelHeight,
+        la.Material,
+        la.Color,
+        la.CustomerNo,
+        la.CustomerType,
+        la.CustomerRemark,
+        p.Qty,
+        lt.FileName
+        FROM
+        PrintLog AS p
+        INNER JOIN Label AS l ON p.LabelCode = l.Code
+        INNER JOIN SysLabelTypeMTR AS ltype ON ltype.Id = l.LabelTypeID
+        INNER JOIN CategoryMTR AS c ON c.Id = l.CategoryID
+        INNER JOIN Department AS d ON l.DepartmentID = d.ID
+        INNER JOIN UserMTR ulogin ON  ('{1}' is null or '{1}'='' or ulogin.LoginAccount = '{1}')
+        INNER JOIN UserDepartment ud ON ud.UserID = ulogin.ID
+        AND ud.DepartmentCode = d.Code
+        LEFT JOIN LabelAccessory as la
+        on la.LabelCode=l.Code
+        INNER JOIN LabelTemplet lt
+        on lt.LabelCode=p.LabelCode
+        WHERE
+        1 = 1 {0}--Conditions
+        AND (
+        ltype.Id = 1
+        OR ltype.Id = 3
+        OR ltype.ID = 5
+        )
+        ORDER BY
+        p.EntryTime
+      </CommandText>
+    </StorageProcedure>
+    <StorageProcedure>
+      <Name>rPrintLogReportByConditions</Name>
+      <AttachDataBaseName></AttachDataBaseName>
+      <CommandText>
+        SELECT
+        p.LabelCode,
+        max(c.Name) AS Category,
+        max(l.Name) AS Name,
+        p.EntryAccount,
+        SUM(p.Qty) AS Qty
+        FROM
+        PrintLog AS p
+        INNER JOIN Label AS l ON p.LabelCode = l.Code
+        INNER JOIN SysLabelTypeMTR AS ltype ON ltype.Id = l.LabelTypeID
+        INNER JOIN CategoryMTR AS c ON c.Id = l.CategoryID
+        INNER JOIN Department AS d ON l.DepartmentID = d.ID
+        INNER JOIN UserMTR ulogin ON  ('{1}' is null or '{1}'='' or ulogin.LoginAccount = '{1}')
+        INNER JOIN UserDepartment ud ON ud.UserID = ulogin.ID
+        AND ud.DepartmentCode = d.Code
+        {0}--Conditions
+        GROUP BY
+        l.CategoryID,
+        p.LabelCode,
+        p.EntryAccount
+        ORDER BY
+        l.CategoryID,
+        p.LabelCode,
+        p.EntryAccount
+      </CommandText>
+    </StorageProcedure>
+    <StorageProcedure>
+      <Name>rRemarkByLabelCodeandEntryTime</Name>
+      <AttachDataBaseName></AttachDataBaseName>
+      <CommandText>
+        SELECT
+        p.Remark
+        FROM
+        PrintLog AS p
+        WHERE
+        p.LabelCode ='{0}'
+        AND p.EntryTime ='{1}'
+      </CommandText>
+    </StorageProcedure>
+    <StorageProcedure>
+      <Name>cPrintLog</Name>
+      <AttachDataBaseName></AttachDataBaseName>
+      <CommandText>
+        INSERT INTO PrintLog (
+        LabelCode,
+        EntryAccount,
+        EntryTime,
+        Remark,
+        Qty
+        )
+        VALUES
+        (
+        '{0}',
+        '{1}',
+        datetime('now','localtime'),
+        '{2}',
+        '{3}'
+        )
+      </CommandText>
+    </StorageProcedure>
+
+    <!--LabelAccessory-->
+    <StorageProcedure>
+      <Name>cLabelAccessory</Name>
+      <AttachDataBaseName></AttachDataBaseName>
+      <CommandText>
+        INSERT INTO LabelAccessory
+        (LabelCode,
+        LabelWidth,
+        LabelHeight,
+        Material,
+        Color,
+        CustomerNo,
+        CustomerType,
+        CustomerRemark
+        )
+        VALUES
+        ('{0}',
+        {1},
+        {2},
+        '{3}',
+        '{4}',
+        '{5}',
+        '{6}',
+        '{7}');
+      </CommandText>
+    </StorageProcedure>
+    <StorageProcedure>
+      <Name>uLabelAccessory</Name>
+      <AttachDataBaseName></AttachDataBaseName>
+      <CommandText>
+
+        DELETE FROM LabelAccessory
+        WHERE LabelCode='{0}';
+        
+        INSERT INTO LabelAccessory
+        (LabelCode,
+        LabelWidth,
+        LabelHeight,
+        Material,
+        Color,
+        CustomerNo,
+        CustomerType,
+        CustomerRemark
+        )
+        VALUES
+        ('{0}',
+        {1},
+        {2},
+        '{3}',
+        '{4}',
+        '{5}',
+        '{6}',
+        '{7}');
+
+        
+      </CommandText>
+    </StorageProcedure>
+    <StorageProcedure>
+      <Name>dLabelAccessory</Name>
+      <AttachDataBaseName></AttachDataBaseName>
+      <CommandText>
+        DELETE
+        FROM
+        LabelAccessory
+        WHERE
+        LabelCode ='{0}'
+      </CommandText>
+    </StorageProcedure>
+    <StorageProcedure>
+      <Name>rLabelAccessoryByLabelCode</Name>
+      <AttachDataBaseName></AttachDataBaseName>
+      <CommandText>
+        SELECT
+        *
+        FROM
+        LabelAccessory
+        WHERE
+        LabelCode ='{0}'
+      </CommandText>
+    </StorageProcedure>
+    
+    <!--MyPrintLog-->
+    <StorageProcedure>
+      <Name>rMyPrintLogByConditions</Name>
+      <AttachDataBaseName></AttachDataBaseName>
+      <CommandText>
+        SELECT
+        p.LabelCode,
+        c.Name AS Category,
+        l.Name,
+        p.Remark,
+        p.EntryAccount,
+        p.EntryTime,
+        l.LabelTypeID,
+        ltype.Name AS LabelTypeName,
+        la.LabelWidth,
+        la.LabelHeight,
+        la.Material,
+        la.Color,
+        la.CustomerNo,
+        la.CustomerType,
+        la.CustomerRemark,
+        p.Qty,
+        lt.FileName
+        FROM
+        PrintLog AS p
+        INNER JOIN Label AS l ON p.LabelCode = l.Code
+        INNER JOIN SysLabelTypeMTR AS ltype ON ltype.Id = l.LabelTypeID
+        INNER JOIN CategoryMTR AS c ON c.Id = l.CategoryID
+        INNER JOIN Department AS d ON l.DepartmentID = d.ID
+        INNER JOIN UserMTR ulogin ON  ('{1}' is null or '{1}'='' or ulogin.LoginAccount = '{1}')
+        INNER JOIN UserDepartment ud ON ud.UserID = ulogin.ID
+        AND ud.DepartmentCode = d.Code
+        LEFT JOIN LabelAccessory as la
+        on la.LabelCode=l.Code
+        INNER JOIN LabelTemplet lt
+        on lt.LabelCode=p.LabelCode
+        WHERE
+        1 = 1 {0}--Conditions
+        AND (
+        ltype.Id = 1
+        OR ltype.Id = 3
+        OR ltype.ID = 5
+        )
+        ORDER BY
+        p.EntryTime
+      </CommandText>
+    </StorageProcedure>
+    <StorageProcedure>
+      <Name>dPrintLog</Name>
+      <AttachDataBaseName></AttachDataBaseName>
+      <CommandText>
+        DELETE
+        FROM
+        PrintLog
+        WHERE
+        EntryTime>'{0}'
+      </CommandText>
+    </StorageProcedure>
+  </StorageProcedureList>
+</SQLiteSystemConfiguration>
